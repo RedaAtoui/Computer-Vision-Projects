@@ -9,7 +9,6 @@ drawing_utils = mp.solutions.drawing_utils
 screen_w, screen_h = pyautogui.size()
 
 def processFaceLandmarks(face_landmarks):
-    # print(type(face_landmarks), face_landmarks[0], type(face_landmarks[0]))
     
     # be careful of the types: face_lanmarks is a list of mediapipe normalized lists.
     # i.e each element of this list holds a list of dictionaries each representing a landmark (dict name)
@@ -48,8 +47,7 @@ while True:
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     processed_image = face_mesh_landmarks.process(rgb_image)
     all_face_landmarks = processed_image.multi_face_landmarks
-    # print("PROCESSEDDDDDD", processed_image)
-    # print("LANDMARKSSSSSS", all_face_landmarks)
+
     processFaceLandmarks(all_face_landmarks)
     cv2.imshow("image", image)
 
