@@ -22,6 +22,9 @@ class PeopleDetector:
         self.gender_labels = ['female', 'male']
 
         self.gender_tracked = gender
+        self.counter = 0
+        self.person_image = None
+        self.face_img = None
 
         if not tracking_mode:
             self.tracking = self.DISABLED
@@ -54,11 +57,14 @@ class PeopleDetector:
         
         if len(faces) == 0:
             return None
-        
         x, y, w, h = max(faces, key=lambda f: f[2] * f[3])  
         face_img = person_image[y:y + h, x:x + w]
     
         face_img = cv2.resize(face_img, (128, 128))
+        
+        self.person_image = person_image
+        self.face_img = face_img
+        
         face_img = face_img / 255.0
         face_img = np.expand_dims(face_img, axis=0)
         
@@ -66,11 +72,14 @@ class PeopleDetector:
         prediction = self.gender_classifier.predict(face_img)
         predicted_gender = self.gender_labels[int(prediction[0] > 0.5)]
 
+        if self.gender_labels.index(predicted_gender) == self.gender_tracked:
+            self.counter += 1
+
         return predicted_gender
 
     def detectPeople(self, video_source_path, video_target_path):
         
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(video_source_path)
         
         frame_width = int(self.cap.get(3))
         frame_height = int(self.cap.get(4))
@@ -125,9 +134,13 @@ class PeopleDetector:
                             else:
                                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
                                 cv2.putText(frame, f'Person {confidence:.2f}', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            cv2.imshow("YOUUUUU", frame)
-            
+
             out.write(frame)
+
+            if self.person_image is not None and self.counter > 0:
+                cv2.imshow("YOUUUUU", self.person_image)
+                cv2.imshow("FACE", self.face_img)
+            
             if cv2.waitKey(5) == 27:
                 break
         
@@ -137,5 +150,5 @@ class PeopleDetector:
 
 # MORE STEPS CAN BE DONE LIKE MAKE IT A GUI FOR BETTER USER EXPERIENCE AND FEEDING DIRECTORY FILES MORE DYNAMICALLY
 hello = PeopleDetector(classifying_mode=True, tracking_mode=True, gender=0)
-hello.detectPeople(video_source_path="C:\\Users\\USER\\Documents\\Work\\Oculi preps\\People Tracker\\people_14.mp4", 
+hello.detectPeople(video_source_path="C:\\Users\\USER\\Documents\\Work\\Oculi preps\\People Tracker\\people_Test.mp4", 
                    video_target_path="C:\\Users\\USER\\Documents\\Work\\Oculi preps\\People Tracker\\output")
