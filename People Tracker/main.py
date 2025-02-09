@@ -4,6 +4,7 @@ from ultralytics import YOLO
 from KalmanFilter import KalmanFilter
 import random
 from tensorflow import keras
+from mtcnn import MTCNN
 
 class PeopleDetector:
     DISABLED = -1
@@ -22,9 +23,6 @@ class PeopleDetector:
         self.gender_labels = ['female', 'male']
 
         self.gender_tracked = gender
-        self.counter = 0
-        self.person_image = None
-        self.face_img = None
 
         if not tracking_mode:
             self.tracking = self.DISABLED
@@ -33,11 +31,13 @@ class PeopleDetector:
                 self.tracking = self.CLASSIFIED
                 self.gender_classifier = keras.models.load_model("C:\\Users\\USER\\Documents\\Work\\Models\\gender_classifier_model.h5")
                 self.face_cascade = cv2.CascadeClassifier('C:\\Users\\USER\\Documents\\Work\\Oculi preps\\Face Detection\\haarcascade_frontalface_default.xml')
+                self.face_detector = MTCNN()
  
             else:
                 self.tracking = self.ALL
                 self.gender_classifier = None
                 self.face_cascade = None
+                self.face_detector = None
 
     def createTracker(self, tracker_id, bbox_center):        
         tracker = KalmanFilter(x=bbox_center[0], y=bbox_center[1], filter_id=tracker_id)
@@ -52,30 +52,35 @@ class PeopleDetector:
         return -1, -1
 
     def detectGender(self, person_image):
-        gray_image = cv2.cvtColor(person_image, cv2.COLOR_BGR2GRAY)
-        faces = self.face_cascade.detectMultiScale(gray_image, 1.7, 4, minSize=(30, 30))
+
+        # if using the face cascade haar method
+        # gray_image = cv2.cvtColor(person_image, cv2.COLOR_BGR2GRAY)
+        # faces = self.face_cascade.detectMultiScale(gray_image, 1.7, 4, minSize=(30, 30))
         
-        if len(faces) == 0:
+
+        # when using the MTCNN method
+        faces_boxes = self.detectFaces(person_image)
+
+        if len(faces_boxes) == 0:
             return None
-        x, y, w, h = max(faces, key=lambda f: f[2] * f[3])  
-        face_img = person_image[y:y + h, x:x + w]
+
+        for (xf, yf, wf, hf) in faces_boxes:
+            face_img = person_image[yf:yf + hf, xf:xf + wf]
     
-        face_img = cv2.resize(face_img, (128, 128))
+            face_img = cv2.resize(face_img, (128, 128))
+            face_img = face_img / 255.0
+            face_img = np.expand_dims(face_img, axis=0)
         
-        self.person_image = person_image
-        self.face_img = face_img
-        
-        face_img = face_img / 255.0
-        face_img = np.expand_dims(face_img, axis=0)
-        
-        
-        prediction = self.gender_classifier.predict(face_img)
-        predicted_gender = self.gender_labels[int(prediction[0] > 0.5)]
+            prediction = self.gender_classifier.predict(face_img)
+            predicted_gender = self.gender_labels[int(prediction[0] > 0.5)]
 
-        if self.gender_labels.index(predicted_gender) == self.gender_tracked:
-            self.counter += 1
+            return predicted_gender
 
-        return predicted_gender
+    def detectFaces(self, frame):
+        results = self.face_detector.detect_faces(frame)
+        faces = [result["box"] for result in results if result["confidence"] > 0.7]
+
+        return faces
 
     def detectPeople(self, video_source_path, video_target_path):
         
@@ -136,19 +141,11 @@ class PeopleDetector:
                                 cv2.putText(frame, f'Person {confidence:.2f}', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             out.write(frame)
-
-            if self.person_image is not None and self.counter > 0:
-                cv2.imshow("YOUUUUU", self.person_image)
-                cv2.imshow("FACE", self.face_img)
-            
-            if cv2.waitKey(5) == 27:
-                break
-        
+                    
         self.cap.release()
         out.release()
-        cv2.destroyAllWindows()
 
 # MORE STEPS CAN BE DONE LIKE MAKE IT A GUI FOR BETTER USER EXPERIENCE AND FEEDING DIRECTORY FILES MORE DYNAMICALLY
-hello = PeopleDetector(classifying_mode=True, tracking_mode=True, gender=0)
+hello = PeopleDetector(classifying_mode=True, tracking_mode=True, gender=1)
 hello.detectPeople(video_source_path="C:\\Users\\USER\\Documents\\Work\\Oculi preps\\People Tracker\\people_Test.mp4", 
                    video_target_path="C:\\Users\\USER\\Documents\\Work\\Oculi preps\\People Tracker\\output")
