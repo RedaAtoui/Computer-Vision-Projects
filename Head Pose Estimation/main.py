@@ -66,7 +66,7 @@ while webcam.isOpened():
             z = angles[2] * 360
 
             if y < -10:
-                text = " Looking forward"
+                text = " Looking Left"
             elif y > 10:
                 text = " Looking Right"
             elif x < -10:
@@ -91,7 +91,6 @@ while webcam.isOpened():
             end = time.time()
             totalTime = end - start
             fps = 1 / totalTime
-            print("FPS: ", fps)
 
             cv2.putText(image, f'FPS: {int(fps)}', (20,450), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
 
