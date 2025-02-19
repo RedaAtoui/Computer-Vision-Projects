@@ -5,9 +5,10 @@ import numpy as np
 
 sign_language_utils = SignLanguageUtils()
 
-threshold = 0.6
+threshold = 0.7
 video = []
 sentence = []
+predictions = []
 
 actions = sign_language_utils.actions
 total_sequences = sign_language_utils.total_sequences
@@ -35,26 +36,28 @@ while cap.isOpened():
     sign_language_utils.drawLandmarks(image, results)
     
     keypoints = sign_language_utils.extractKeypoints(results=results)
-    video.insert(0, keypoints)
-    video = video[:30]
+    video.append(keypoints)
+    video = video[-30:]
 
     if len(video) == 30:
         res = sign_language_model.predict(np.expand_dims(video, axis=0))[0]
         predicted_action = actions[np.argmax(res)]
+        predictions.append(predicted_action)
 
-        if res[np.argmax(res)] > threshold:
-            if len(sentence) > 0:
-                if predicted_action != sentence[-1]:
+        if np.unique(predictions[-10:])[0] == predicted_action:
+            if res[np.argmax(res)] > threshold:
+                if len(sentence) > 0:
+                    if predicted_action != sentence[-1]:
+                        sentence.append(predicted_action)
+                else:
                     sentence.append(predicted_action)
-            else:
-                sentence.append(predicted_action)
         
         if len(sentence) > 5:
             sentence = sentence[-5:]
 
         image = probibalityViz(res, image)
-        cv2.rectangle(image, (0, 0), (640, 40), (247, 117, 16), -1)
-        cv2.putText(image, " ".join(sentence), (3, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+    cv2.rectangle(image, (0, 0), (640, 40), (247, 117, 16), -1)
+    cv2.putText(image, " ".join(sentence), (3, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     cv2.imshow("", image)
