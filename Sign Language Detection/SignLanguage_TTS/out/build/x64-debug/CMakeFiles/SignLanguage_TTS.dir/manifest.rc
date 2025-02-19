@@ -1,0 +1,2 @@
+#pragma code_page(65001)
+1 /* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 24 /* RT_MANIFEST */ "C:/Users/USER/Documents/Work/Oculi preps/Sign Language Detection/SignLanguage_TTS/out/build/x64-debug/CMakeFiles/SignLanguage_TTS.dir/embed.manifest"

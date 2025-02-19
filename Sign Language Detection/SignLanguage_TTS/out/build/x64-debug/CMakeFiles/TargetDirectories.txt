@@ -1,0 +1,3 @@
+C:/Users/USER/Documents/Work/Oculi preps/Sign Language Detection/SignLanguage_TTS/out/build/x64-debug/CMakeFiles/SignLanguage_TTS.dir
+C:/Users/USER/Documents/Work/Oculi preps/Sign Language Detection/SignLanguage_TTS/out/build/x64-debug/CMakeFiles/edit_cache.dir
+C:/Users/USER/Documents/Work/Oculi preps/Sign Language Detection/SignLanguage_TTS/out/build/x64-debug/CMakeFiles/rebuild_cache.dir

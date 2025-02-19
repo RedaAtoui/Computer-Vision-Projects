@@ -2,6 +2,21 @@ from SignLanguageUtils import SignLanguageUtils
 import cv2
 from tensorflow import keras
 import numpy as np
+import socket
+import subprocess
+import time
+
+cpp_TTS = "SignLanguage_TTS\\out\\build\\x64-debug\\SignLanguage_TTS.exe"
+subprocess.Popen(cpp_TTS, shell=True)
+time.sleep(2)
+
+
+HOST = "127.0.0.1"
+PORT = 5000
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind((HOST, PORT))
+server.listen(1)
 
 sign_language_utils = SignLanguageUtils()
 
@@ -16,7 +31,7 @@ sequence_length = sign_language_utils.sequence_length
 DATA_PATH = sign_language_utils.DATA_PATH
 
 mp_model = sign_language_utils.mp_model
-sign_language_model = keras.models.load_model("C:\\Users\\USER\\Documents\\Work\\Oculi preps\\Sign Language Detection\\sign_language_detector.h5")
+sign_language_model = keras.models.load_model("sign_language_detector.h5")
 
 cap = cv2.VideoCapture(0)
 colors = [(245, 117, 16), (117, 245, 16), (16, 117, 245)]
@@ -30,6 +45,9 @@ def probibalityViz(res, input_frame):
         
     return output_frame
 
+
+
+conn, addr = server.accept()
 while cap.isOpened():
     ret, frame = cap.read()
     image, results = sign_language_utils.landmarksDetection(frame)
@@ -49,6 +67,7 @@ while cap.isOpened():
                 if len(sentence) > 0:
                     if predicted_action != sentence[-1]:
                         sentence.append(predicted_action)
+                        conn.sendall(predicted_action.encode('utf-8'))
                 else:
                     sentence.append(predicted_action)
         
@@ -66,3 +85,5 @@ while cap.isOpened():
 
 cap.release()
 cv2.destroyAllWindows()
+conn.close()
+server.close()
