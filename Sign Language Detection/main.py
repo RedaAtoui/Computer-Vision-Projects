@@ -1,69 +1,65 @@
+from SignLanguageUtils import SignLanguageUtils
 import cv2
-from matplotlib import pyplot as plt
-import tensorflow as tf
+from tensorflow import keras
 import numpy as np
-import mediapipe as mp
-import time
-import os
 
-class SignLanguageDetector():
-    def __init__(self):
+sign_language_utils = SignLanguageUtils()
+
+threshold = 0.6
+video = []
+sentence = []
+
+actions = sign_language_utils.actions
+total_sequences = sign_language_utils.total_sequences
+sequence_length = sign_language_utils.sequence_length
+DATA_PATH = sign_language_utils.DATA_PATH
+
+mp_model = sign_language_utils.mp_model
+sign_language_model = keras.models.load_model("C:\\Users\\USER\\Documents\\Work\\Oculi preps\\Sign Language Detection\\sign_language_detector.h5")
+
+cap = cv2.VideoCapture(0)
+colors = [(245, 117, 16), (117, 245, 16), (16, 117, 245)]
+
+def probibalityViz(res, input_frame):
+    output_frame = input_frame.copy()
+    for index, prob in enumerate(res):
+        cv2.rectangle(output_frame, (0,60+index*40), (int(prob*100), 90+index*40), colors[index], -1)
+        cv2.putText(output_frame, actions[index], (0, 85+index*40), cv2.FONT_HERSHEY_SIMPLEX, 1, 
+                    (255, 255, 255), 2, cv2.LINE_AA)
         
-        self.mp_holistic = mp.solutions.holistic
-        self.mp_model = self.mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
-        self.mp_drawing = mp.solutions.drawing_utils
+    return output_frame
 
-        self.cap = cv2.VideoCapture(0)
-
-    def landmarksDetection(self, frame):
-        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        image.flags.writeable = False
-        results = self.mp_model.process(image)
-        image.flags.writeable = True
-        image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        return image, results
+while cap.isOpened():
+    ret, frame = cap.read()
+    image, results = sign_language_utils.landmarksDetection(frame)
+    sign_language_utils.drawLandmarks(image, results)
     
-    def drawLandmarks(self, image, results):
-        self.mp_drawing.draw_landmarks(image, results.face_landmarks, self.mp_holistic.FACEMESH_TESSELATION,
-                                       self.mp_drawing.DrawingSpec(color=(80, 110, 10), thickness=1, circle_radius=1),
-                                       self.mp_drawing.DrawingSpec(color=(80, 256, 121), thickness=1, circle_radius=1))
-        
-        self.mp_drawing.draw_landmarks(image, results.pose_landmarks, self.mp_holistic.POSE_CONNECTIONS,
-                                       self.mp_drawing.DrawingSpec(color=(80, 22, 10), thickness=2, circle_radius=4),
-                                       self.mp_drawing.DrawingSpec(color=(80, 44, 121), thickness=2, circle_radius=2))
-        
-        self.mp_drawing.draw_landmarks(image, results.left_hand_landmarks, self.mp_holistic.HAND_CONNECTIONS,
-                                       self.mp_drawing.DrawingSpec(color=(121, 22, 76), thickness=2, circle_radius=4),
-                                       self.mp_drawing.DrawingSpec(color=(121, 44, 250), thickness=2, circle_radius=2))
- 
-        self.mp_drawing.draw_landmarks(image, results.right_hand_landmarks, self.mp_holistic.HAND_CONNECTIONS,
-                                       self.mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
-                                       self.mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2))
+    keypoints = sign_language_utils.extractKeypoints(results=results)
+    video.insert(0, keypoints)
+    video = video[:30]
 
-    def extractKeypoints(self, results):
-        pose = np.array([[res.x, res.y, res.z, res.visibility] for res in results.pose_landmarks.landmark]).flatten() if results.pose_landmarks else np.zeros(33*3)
-        face = np.array([[res.x, res.y, res.z] for res in results.face_landmarks.landmark]).flatten() if results.face_landmarks else np.zeros(468*3)
-        lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() if results.left_hand_landmarks else np.zeros(21*3)
-        rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
+    if len(video) == 30:
+        res = sign_language_model.predict(np.expand_dims(video, axis=0))[0]
+        predicted_action = actions[np.argmax(res)]
+
+        if res[np.argmax(res)] > threshold:
+            if len(sentence) > 0:
+                if predicted_action != sentence[-1]:
+                    sentence.append(predicted_action)
+            else:
+                sentence.append(predicted_action)
         
-        return np.concatenate([pose, face, lh, rh])
+        if len(sentence) > 5:
+            sentence = sentence[-5:]
 
-    def runDetector(self):
-        
-        while self.cap.isOpened():
-            ret, frame = self.cap.read()
-            image, results = self.landmarksDetection(frame)
-            print(self.extractKeypoints(results=results))
-            self.drawLandmarks(image, results)
+        image = probibalityViz(res, image)
+        cv2.rectangle(image, (0, 0), (640, 40), (247, 117, 16), -1)
+        cv2.putText(image, " ".join(sentence), (3, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            cv2.imshow("", image)
-            if cv2.waitKey(10) == 27:
-                break
-        
-        self.cap.release()
-        cv2.destroyAllWindows()
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    cv2.imshow("", image)
+    if cv2.waitKey(10) == 27:
+        break
 
-
-sign_language_detector = SignLanguageDetector()
-sign_language_detector.runDetector()
+cap.release()
+cv2.destroyAllWindows()
