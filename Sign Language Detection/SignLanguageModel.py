@@ -40,9 +40,9 @@ model.add(Dense(actions.shape[0], activation='softmax'))
 
 model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
 
-model.fit(x_train, y_train, epochs=200)
-model.save('sign_language_utils.h5')
-model.save('C:\\Users\\USER\\Documents\\Work\\Models\\sign_language_utils.h5')
+model.fit(x_train, y_train, epochs=150)
+model.save('sign_language_detector.h5')
+model.save('C:\\Users\\USER\\Documents\\Work\\Models\\sign_language_detector.h5')
 
 
 # To test the model
